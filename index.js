@@ -27,6 +27,14 @@ async function run() {
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
+    const database = client.db("BookNest");
+    const booksCollection = database.collection("books");
+
+    app.post("/add-book", async (req, res) => {
+      const book = req.body;
+      const result = await booksCollection.insertOne(book);
+      res.send(result);
+    });
   } finally {
     //   await client.close();
   }
