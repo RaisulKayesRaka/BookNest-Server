@@ -71,8 +71,23 @@ async function run() {
 
     app.post("/borrow-book", async (req, res) => {
       const borrowedBook = req.body;
-      const result = await borrowedBooksCollection.insertOne(borrowedBook);
-      res.send(result);
+
+      const bookId = borrowedBook?.bookId;
+      const query = { _id: new ObjectId(bookId) };
+      const updateQuantity = {
+        $inc: {
+          quantity: -1,
+        },
+      };
+      const result = await booksCollection.updateOne(query, updateQuantity);
+      if (result.modifiedCount === 1) {
+        const insertedResult = await borrowedBooksCollection.insertOne(
+          borrowedBook
+        );
+        res.send(insertedResult);
+      } else {
+        res.send({ message: "Failed to borrow book" });
+      }
     });
   } finally {
     //   await client.close();
