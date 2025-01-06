@@ -61,6 +61,14 @@ async function run() {
       res.send({ ...book, isBorrowed });
     });
 
+    app.put("/update-book/:id", async (req, res) => {
+      const id = req.params?.id;
+      const book = req.body;
+      const query = { _id: new ObjectId(id) };
+      const result = await booksCollection.updateOne(query, { $set: book });
+      res.send(result);
+    });
+
     app.get("/borrowed-books", async (req, res) => {
       const email = req.query.email;
       const query = email ? { borrowerEmail: email } : {};
