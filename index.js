@@ -45,10 +45,20 @@ async function run() {
     });
 
     app.get("/book/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await booksCollection.findOne(query);
-      res.send(result);
+      const id = req.params?.id;
+      const email = req.query?.email;
+
+      const book = await booksCollection.findOne({ _id: new ObjectId(id) });
+
+      let isBorrowed = false;
+      if (email) {
+        const borrowedBook = await borrowedBooksCollection.findOne({
+          borrowerEmail: email,
+          bookId: id,
+        });
+        isBorrowed = !!borrowedBook;
+      }
+      res.send({ ...book, isBorrowed });
     });
 
     app.get("/borrowed-books", async (req, res) => {
@@ -67,13 +77,6 @@ async function run() {
         return { ...borrowedBook, ...book };
       });
       res.send(result);
-    });
-
-    app.get("/borrowed-book/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { bookId: id };
-      const result = await borrowedBooksCollection.findOne(query);
-      res.send(result ? true : false);
     });
 
     app.post("/borrow-book", async (req, res) => {
