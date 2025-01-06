@@ -89,6 +89,25 @@ async function run() {
         res.send({ message: "Failed to borrow book" });
       }
     });
+
+    app.patch("/return-book/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateQuantity = {
+        $inc: {
+          quantity: 1,
+        },
+      };
+      const result = await booksCollection.updateOne(query, updateQuantity);
+      if (result.modifiedCount === 1) {
+        const deletedResult = await borrowedBooksCollection.deleteOne({
+          bookId: id,
+        });
+        res.send(deletedResult);
+      } else {
+        res.send({ message: "Failed to return book" });
+      }
+    });
   } finally {
     //   await client.close();
   }
