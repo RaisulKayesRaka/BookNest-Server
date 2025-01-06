@@ -29,6 +29,7 @@ async function run() {
     );
     const database = client.db("BookNest");
     const booksCollection = database.collection("books");
+    const borrowedBooksCollection = database.collection("borrowedBooks");
 
     app.post("/add-book", async (req, res) => {
       const book = req.body;
@@ -47,6 +48,12 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await booksCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.post("/borrow-book", async (req, res) => {
+      const borrowedBook = req.body;
+      const result = await borrowedBooksCollection.insertOne(borrowedBook);
       res.send(result);
     });
   } finally {
