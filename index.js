@@ -69,6 +69,13 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/borrowed-book/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { bookId: id };
+      const result = await borrowedBooksCollection.findOne(query);
+      res.send(result ? true : false);
+    });
+
     app.post("/borrow-book", async (req, res) => {
       const borrowedBook = req.body;
 
