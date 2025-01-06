@@ -51,6 +51,24 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/borrowed-books", async (req, res) => {
+      const email = req.query.email;
+      const query = email ? { borrowerEmail: email } : {};
+      const borrowedBooks = await borrowedBooksCollection.find(query).toArray();
+
+      const bookIds = borrowedBooks.map((borrowedBook) => borrowedBook.bookId);
+      const books = await booksCollection
+        .find({ _id: { $in: bookIds.map((id) => new ObjectId(id)) } })
+        .toArray();
+      const result = borrowedBooks.map((borrowedBook) => {
+        const book = books.find(
+          (book) => book._id.toString() === borrowedBook?.bookId
+        );
+        return { ...borrowedBook, ...book };
+      });
+      res.send(result);
+    });
+
     app.post("/borrow-book", async (req, res) => {
       const borrowedBook = req.body;
       const result = await borrowedBooksCollection.insertOne(borrowedBook);
