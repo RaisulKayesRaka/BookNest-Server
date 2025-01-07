@@ -44,6 +44,12 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/available-books", async (req, res) => {
+      const query = { quantity: { $gt: 0 } };
+      const result = await booksCollection.find(query).toArray();
+      res.send(result);
+    });
+
     app.get("/book/:id", async (req, res) => {
       const id = req.params?.id;
       const email = req.query?.email;
