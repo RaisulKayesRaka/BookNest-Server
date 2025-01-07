@@ -95,22 +95,29 @@ async function run() {
 
     app.post("/borrow-book", async (req, res) => {
       const borrowedBook = req.body;
+      const count = await borrowedBooksCollection.countDocuments({
+        borrowerEmail: borrowedBook?.borrowerEmail,
+      });
 
-      const bookId = borrowedBook?.bookId;
-      const query = { _id: new ObjectId(bookId) };
-      const updateQuantity = {
-        $inc: {
-          quantity: -1,
-        },
-      };
-      const result = await booksCollection.updateOne(query, updateQuantity);
-      if (result.modifiedCount === 1) {
-        const insertedResult = await borrowedBooksCollection.insertOne(
-          borrowedBook
-        );
-        res.send(insertedResult);
+      if (count >= 3) {
+        res.send({ message: "You can't borrow more than 3 books" });
       } else {
-        res.send({ message: "Failed to borrow book" });
+        const bookId = borrowedBook?.bookId;
+        const query = { _id: new ObjectId(bookId) };
+        const updateQuantity = {
+          $inc: {
+            quantity: -1,
+          },
+        };
+        const result = await booksCollection.updateOne(query, updateQuantity);
+        if (result.modifiedCount === 1) {
+          const insertedResult = await borrowedBooksCollection.insertOne(
+            borrowedBook
+          );
+          res.send(insertedResult);
+        } else {
+          res.send({ message: "Failed to borrow book" });
+        }
       }
     });
 
