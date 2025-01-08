@@ -3,6 +3,7 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const app = express();
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const corsOptions = {
@@ -13,6 +14,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(cookieParser());
 const port = process.env.PORT || 5000;
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.3meil.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -23,6 +25,22 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    return res
+      .status(401)
+      .send({ error: true, message: "Unauthorized Access" });
+  }
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).send({ error: true, message: "Forbidden Access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 app.get("/", (req, res) => {
   res.send("BookNest...");
@@ -62,28 +80,35 @@ async function run() {
         .send({ success: true });
     });
 
-    app.post("/add-book", async (req, res) => {
+    app.post("/add-book", verifyToken, async (req, res) => {
       const book = req.body;
       const result = await booksCollection.insertOne(book);
       res.send(result);
     });
 
-    app.get("/books", async (req, res) => {
+    app.get("/books", verifyToken, async (req, res) => {
       const category = req.query.category;
       const query = category ? { category } : {};
       const result = await booksCollection.find(query).toArray();
       res.send(result);
     });
 
-    app.get("/available-books", async (req, res) => {
+    app.get("/available-books", verifyToken, async (req, res) => {
       const query = { quantity: { $gt: 0 } };
       const result = await booksCollection.find(query).toArray();
       res.send(result);
     });
 
-    app.get("/book/:id", async (req, res) => {
+    app.get("/book/:id", verifyToken, async (req, res) => {
+      const decodedEmail = req.decoded?.email;
       const id = req.params?.id;
       const email = req.query?.email;
+
+      if (email !== decodedEmail) {
+        return res
+          .status(401)
+          .send({ error: true, message: "Unauthorized Access" });
+      }
 
       const book = await booksCollection.findOne({ _id: new ObjectId(id) });
 
@@ -98,7 +123,7 @@ async function run() {
       res.send({ ...book, isBorrowed });
     });
 
-    app.put("/update-book/:id", async (req, res) => {
+    app.put("/update-book/:id", verifyToken, async (req, res) => {
       const id = req.params?.id;
       const book = req.body;
       const query = { _id: new ObjectId(id) };
@@ -106,8 +131,14 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/borrowed-books", async (req, res) => {
-      const email = req.query.email;
+    app.get("/borrowed-books", verifyToken, async (req, res) => {
+      const decodedEmail = req.decoded?.email;
+      const email = req.query?.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(401)
+          .send({ error: true, message: "Unauthorized Access" });
+      }
       const query = email ? { borrowerEmail: email } : {};
       const borrowedBooks = await borrowedBooksCollection.find(query).toArray();
 
@@ -124,8 +155,15 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/borrow-book", async (req, res) => {
+    app.post("/borrow-book", verifyToken, async (req, res) => {
+      const decodedEmail = req.decoded?.email;
       const borrowedBook = req.body;
+
+      if (borrowedBook?.borrowerEmail !== decodedEmail) {
+        return res
+          .status(401)
+          .send({ error: true, message: "Unauthorized Access" });
+      }
       const count = await borrowedBooksCollection.countDocuments({
         borrowerEmail: borrowedBook?.borrowerEmail,
       });
@@ -152,7 +190,7 @@ async function run() {
       }
     });
 
-    app.patch("/return-book/:id", async (req, res) => {
+    app.patch("/return-book/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateQuantity = {
