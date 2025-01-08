@@ -7,7 +7,11 @@ const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const corsOptions = {
-  origin: ["http://localhost:5173"],
+  origin: [
+    "https://booknest-library.web.app",
+    "https://booknest-library.firebaseapp.com ",
+    "http://localhost:5173",
+  ],
   credentials: true,
   optionalSuccessStatus: 200,
 };
@@ -86,14 +90,14 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/books", verifyToken, async (req, res) => {
+    app.get("/books", async (req, res) => {
       const category = req.query.category;
       const query = category ? { category } : {};
       const result = await booksCollection.find(query).toArray();
       res.send(result);
     });
 
-    app.get("/available-books", verifyToken, async (req, res) => {
+    app.get("/available-books", async (req, res) => {
       const query = { quantity: { $gt: 0 } };
       const result = await booksCollection.find(query).toArray();
       res.send(result);
